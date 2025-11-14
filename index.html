@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en" class=""><head><script>window.livecodes = window.livecodes || {};</script><title>School teacher </title><meta name="title" content="School teacher "><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="./style.css"><script src="https://cdn.jsdelivr.net/npm/es-module-shims@1.10.0/dist/es-module-shims.js" async=""></script><script type="importmap">{
+  "imports": {}
+}</script></head><body>
+
+
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Portal - Navrose Smart School</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        :root {
+            --bg-primary: #f7f8fa;
+            --bg-secondary: #ffffff;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --accent-primary: #4f46e5;
+            --accent-hover: #4338ca;
+            --border-color: #e5e7eb;
+        }
+        html, body { height: 100%; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg-primary); }
+        .form-input, .form-textarea, .form-select {
+            width: 100%; padding: 0.75rem; border: 1px solid var(--border-color);
+            border-radius: 0.5rem; font-size: 1rem; background-color: var(--bg-secondary);
+        }
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            outline: none; border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 20%, transparent);
+        }
+        .card {
+            background-color: var(--bg-secondary); border-radius: 1rem; padding: 1.5rem;
+            border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.05);
+        }
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5); display: none;
+            justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal.active { display: flex; }
+        .modal-content { background-color: white; padding: 2rem; border-radius: 1rem; width: 90%; max-width: 600px; }
+        #toast {
+            position: fixed; bottom: 1.5rem; right: 1.5rem; background-color: #1f2937; color: white;
+            padding: 0.75rem 1.25rem; border-radius: 0.5rem; z-index: 1200; opacity: 0;
+            transition: opacity .3s ease, transform .3s ease; transform: translateY(20px);
+        }
+        #toast.show { opacity: 1; transform: translateY(0); }
+        .tab-button.active { background-color: var(--accent-primary); color: white; }
+        
+        /* Live Class View */
+        .classroom-container { display: flex; height: calc(100vh - 10rem); gap: 1rem; }
+        .main-video-area { flex-grow: 1; background-color: #000; border-radius: 1rem; display: flex; justify-content: center; align-items: center; position: relative; overflow: hidden; }
+        .main-video-area video { width: 100%; height: 100%; object-fit: cover; }
+        .classroom-sidebar { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 1rem; }
+        .participants-panel, .chat-panel { background-color: var(--bg-secondary); border-radius: 1rem; border: 1px solid var(--border-color); display: flex; flex-direction: column; }
+        .participants-panel { flex-shrink: 0; }
+        .chat-panel { flex-grow: 1; }
+        .panel-header { padding: 0.75rem 1rem; font-weight: 700; border-bottom: 1px solid var(--border-color); }
+        .panel-body { padding: 1rem; overflow-y: auto; flex-grow: 1; }
+        .chat-messages { display: flex; flex-direction: column; gap: 0.75rem; }
+        .chat-message { padding: 0.5rem 0.75rem; border-radius: 0.5rem; max-width: 80%; }
+        .chat-message.self { background-color: var(--accent-primary); color: white; align-self: flex-end; }
+        .chat-message.other { background-color: #f3f4f6; align-self: flex-start; }
+        .chat-input { border-top: 1px solid var(--border-color); padding: 0.75rem; display: flex; gap: 0.5rem; }
+        .video-controls { position: absolute; bottom: 1rem; left: 50%; transform: translateX(-50%); background-color: rgba(0,0,0,0.5); padding: 0.75rem 1.5rem; border-radius: 9999px; display: flex; gap: 1rem; }
+        .control-btn { width: 48px; height: 48px; border-radius: 50%; background-color: rgba(255,255,255,0.2); color: white; display: flex; justify-content: center; align-items: center; cursor: pointer; border: none; transition: background-color 0.2s; }
+        .control-btn:hover { background-color: rgba(255,255,255,0.3); }
+        .control-btn.danger { background-color: #ef4444; }
+        .control-btn.danger:hover { background-color: #dc2626; }
+
+        @media print {
+            body * { visibility: hidden; }
+            #print-area, #print-area * { visibility: visible; }
+            #print-area { position: absolute; left: 0; top: 0; width: 100%; }
+            .qr-card { 
+                width: 48%; height: auto; border: 1px solid black; padding: 10px; margin: 1%;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+
+
+    <div id="login-overlay" class="fixed inset-0 bg-gray-100 z-50 flex items-center justify-center hidden">
+        <div class="w-full max-w-sm p-8 space-y-6 bg-white rounded-2xl shadow-lg">
+            <div class="text-center">
+                <h1 class="text-2xl font-bold">Teacher Portal Login</h1>
+                <p class="text-gray-500">Welcome back!</p>
+            </div>
+            <form id="teacher-login-form" class="space-y-4">
+                <div>
+                    <label for="teacher-mobile" class="block text-sm font-medium text-gray-700">Mobile No.</label>
+                    <input type="tel" id="teacher-mobile" class="form-input mt-1" required="">
+                </div>
+                <div>
+                    <label for="teacher-password" class="block text-sm font-medium text-gray-700">Password</label>
+                    <input type="password" id="teacher-password" class="form-input mt-1" required="">
+                </div>
+                <div class="pt-2">
+                     <button type="submit" class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg">Login</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <nav class="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 hidden">
+        <div class="p-4 border-b flex items-center gap-3">
+            <div class="bg-indigo-600 p-2 rounded-lg text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M11.7 2.81a.75.75 0 0 1 1.06 0l.47.47.47-.47a.75.75 0 0 1 1.06 0l.47.47.47-.47a.75.75 0 0 1 1.06 0l.47.47.47-.47a.75.75 0 0 1 1.06 0l3.18 3.18a.75.75 0 0 1 0 1.06l-.47.47.47.47a.75.75 0 0 1 0 1.06l-.47.47.47.47a.75.75 0 0 1 0 1.06l-.47.47.47.47a.75.75 0 0 1 0 1.06l-3.18 3.18a.75.75 0 0 1-1.06 0l-.47-.47-.47.47a.75.75 0 0 1-1.06 0l-.47-.47-.47.47a.75.75 0 0 1-1.06 0l-.47-.47-.47.47a.75.75 0 0 1-1.06 0L8.81 16.2a.75.75 0 0 1 0-1.06l.47-.47-.47-.47a.75.75 0 0 1 0-1.06l.47-.47-.47-.47a.75.75 0 0 1 0-1.06l.47-.47-.47-.47a.75.75 0 0 1 0-1.06l3.18-3.18ZM12 5.44 9.17 8.27l1.06 1.06a.75.75 0 0 1-1.06 1.06l-1.06-1.06L5.44 12l2.83 2.83 1.06-1.06a.75.75 0 0 1 1.06 1.06l-1.06 1.06L12 18.56l2.83-2.83-1.06-1.06a.75.75 0 0 1 1.06-1.06l1.06 1.06L18.56 12l-2.83-2.83-1.06 1.06a.75.75 0 1 1-1.06-1.06l1.06-1.06L12 5.44Z"></path></svg>
+            </div>
+            <h1 class="text-xl font-bold">Teacher Portal</h1>
+        </div>
+        <div class="flex-grow p-4 space-y-2">
+            <button data-tab="dashboard" class="w-full text-left p-3 rounded-lg font-semibold text-gray-700 hover:bg-gray-100 tab-button active">Dashboard</button>
+            <button data-tab="id-card" class="w-full text-left p-3 rounded-lg font-semibold text-gray-700 hover:bg-gray-100 tab-button">My ID Card</button>
+            <button data-tab="my-attendance" class="w-full text-left p-3 rounded-lg font-semibold text-gray-700 hover:bg-gray-100 tab-button">My Attendance</button>
+            <button data-tab="attendance" class="w-full text-left p-3 rounded-lg font-semibold text-gray-700 hover:bg-gray-100 tab-button">Student Attendance</button>
+            <button data-tab="qr-management" class="w-full text-left p-3 rounded-lg font-semibold text-gray-700 hover:bg-gray-100 tab-button">QR Management</button>
+            <button data-tab="homework" class="w-full text-left p-3 rounded-lg font-semibold text-gray-700 hover:bg-gray-100 tab-button">Manage Homework</button>
+            <button data-tab="results" class="w-full text-left p-3 rounded-lg font-semibold text-gray-700 hover:bg-gray-100 tab-button">Manage Results</button>
+            <button data-tab="liveclass" class="w-full text-left p-3 rounded-lg font-semibold text-gray-700 hover:bg-gray-100 tab-button">Live Classes</button>
+            <button data-tab="payouts" class="w-full text-left p-3 rounded-lg font-semibold text-gray-700 hover:bg-gray-100 tab-button">View Payouts</button>
+        </div>
+        <div class="p-4 border-t">
+            <button id="logout-btn" class="w-full text-left p-3 rounded-lg font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M7.5 3.75A1.5 1.5 0 0 0 6 5.25v13.5a1.5 1.5 0 0 0 1.5 1.5h6a1.5 1.5 0 0 0 1.5-1.5V15a.75.75 0 0 1 1.5 0v3.75a3 3 0 0 1-3 3h-6a3 3 0 0 1-3-3V5.25a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3V9A.75.75 0 0 1 15 9V5.25a1.5 1.5 0 0 0-1.5-1.5h-6Zm10.72 4.72a.75.75 0 0 1 1.06 0l3 3a.75.75 0 0 1 0 1.06l-3 3a.75.75 0 1 1-1.06-1.06l1.72-1.72H9a.75.75 0 0 1 0-1.5h10.94l-1.72-1.72a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"></path></svg>
+                Logout
+            </button>
+        </div>
+    </nav>
+
+    <main class="flex-1 p-8 overflow-y-auto hidden">
+        <header class="flex justify-between items-center mb-8">
+            <h2 id="page-title" class="text-3xl font-bold">Dashboard</h2>
+            <div id="teacher-info" class="text-right"></div>
+        </header>
+        <div id="app-content-container"></div>
+    </main>
+
+    <div id="form-modal" class="modal"><div class="modal-content"><h3 id="form-modal-title" class="text-2xl font-bold mb-6"></h3><form id="form-modal-body" class="space-y-4"></form></div></div>
+    <div id="qr-modal" class="modal"><div id="qr-modal-content" class="modal-content text-center"></div></div>
+    <div id="toast"></div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyD7gB7FbMFtG1k1vJGVI3XVCyCUNeZIC7M",
+        databaseURL: "https://smart-school-e9f86-default-rtdb.asia-southeast1.firebasedatabase.app",
+    };
+    
+    // --- APP STATE (GLOBAL) ---
+    let db;
+    let teacher = null;
+    let students = [];
+    let homework = [];
+    let liveClasses = [];
+    let attendanceRecords = [];
+    let teacherAttendanceRecords = [];
+    let results = [];
+    let salaries = [];
+    let classSubjects = {};
+    let localStream = null;
+    let activeDBListeners = [];
+    let studentQrScanner;
+    const mainContent = document.getElementById('app-content-container');
+    
+    // --- UTILITIES ---
+    function openFormModal(title, formHTML, onSubmit) {
+        const modal = document.getElementById('form-modal');
+        modal.querySelector('#form-modal-title').textContent = title;
+        const formBody = modal.querySelector('#form-modal-body');
+        formBody.innerHTML = formHTML;
+        modal.classList.add('active');
+        const handleSubmit = (e) => { e.preventDefault(); if(onSubmit(formBody)) closeFormModal(); };
+        const closeFormModal = () => { modal.classList.remove('active'); formBody.removeEventListener('submit', handleSubmit); };
+        formBody.addEventListener('submit', handleSubmit);
+        modal.querySelectorAll('.form-modal-cancel').forEach(btn => btn.addEventListener('click', closeFormModal));
+    }
+    function showToast(message, isError=false) {
+        const t = document.getElementById('toast');
+        if (!t) return;
+        t.style.backgroundColor = isError ? '#ef4444' : '#1f2937';
+        t.textContent = message; t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+    function logout() {
+        sessionStorage.removeItem('loggedInUser');
+        teacher = null; students = []; homework = []; liveClasses = []; attendanceRecords = []; teacherAttendanceRecords = []; results = []; salaries = []; classSubjects = {};
+        document.querySelector('nav').classList.add('hidden');
+        document.querySelector('main').classList.add('hidden');
+        showLogin();
+    }
+    function cleanupDBListeners() {
+        activeDBListeners.forEach(l => l.ref.off(l.type, l.callback));
+        activeDBListeners = [];
+    }
+    function addDBListener(ref, type, callback) {
+        ref.on(type, callback);
+        activeDBListeners.push({ ref, type, callback });
+    }
+
+    // --- RENDER FUNCTIONS ---
+    function renderDashboard() {
+        const studentsInClass = students.filter(s => s.className === teacher.assignedClass && s.section === teacher.assignedSection);
+        const today = new Date().toISOString().split('T')[0];
+        const attendanceRecordId = `${today}_${teacher.assignedClass}_${teacher.assignedSection}`;
+        const todaysAttendance = attendanceRecords.find(r => r.id === attendanceRecordId);
+        let presentCount = 0;
+        if(todaysAttendance && todaysAttendance.attendance) {
+            presentCount = Object.values(todaysAttendance.attendance).filter(status => status === 'Present').length;
+        }
+        const attendancePercent = studentsInClass.length > 0 ? ((presentCount / studentsInClass.length) * 100).toFixed(0) : 0;
+        const todaysLiveClasses = liveClasses.filter(lc => lc.teacherId === teacher.id && lc.date === today);
+
+        mainContent.innerHTML = `
+            <div class="space-y-8">
+                <div>
+                    <h3 class="text-2xl font-bold">Welcome, ${teacher.staffName}!</h3>
+                    <p class="text-gray-600 mt-1">Here's a summary of your class: <strong>${teacher.assignedClass || 'N/A'} - ${teacher.assignedSection || 'N/A'}</strong></p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="card"><h3 class="font-semibold text-gray-500">Total Students</h3><p class="text-4xl font-extrabold mt-2">${studentsInClass.length}</p></div>
+                    <div class="card"><h3 class="font-semibold text-gray-500">Today's Attendance</h3><p class="text-4xl font-extrabold text-indigo-600 mt-2">${attendancePercent}%</p></div>
+                    <div class="card"><h3 class="font-semibold text-gray-500">Pending Homework</h3><p class="text-4xl font-extrabold mt-2">${homework.filter(h => new Date(h.dueDate) > new Date()).length}</p></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                     <div class="card">
+                         <h4 class="font-bold text-lg mb-4">Quick Actions</h4>
+                         <div class="space-y-3">
+                            <button onclick="setActiveTab('attendance')" class="w-full text-left p-4 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700">Take Today's Attendance</button>
+                            <button onclick="setActiveTab('homework')" class="w-full text-left p-4 rounded-lg font-semibold text-white bg-sky-500 hover:bg-sky-600">Assign New Homework</button>
+                            <button onclick="setActiveTab('results')" class="w-full text-left p-4 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600">Enter Student Marks</button>
+                         </div>
+                     </div>
+                      <div class="card">
+                         <h4 class="font-bold text-lg mb-4">Today's Live Classes</h4>
+                         <div class="space-y-3">
+                             ${todaysLiveClasses.length > 0 ? todaysLiveClasses.map(lc => `
+                                <div class="p-3 border rounded-lg flex justify-between items-center">
+                                    <div><p class="font-semibold">${lc.topic}</p><p class="text-sm text-gray-500">at ${lc.startTime}</p></div>
+                                    <a href="${lc.meetingUrl}" target="_blank" class="bg-green-600 text-white font-semibold py-1 px-3 text-sm rounded-lg hover:bg-green-700">Join</a>
+                                </div>
+                             `).join('') : '<p class="text-center py-8 text-gray-500">No live classes scheduled for today.</p>'}
+                         </div>
+                     </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderMyAttendance() {
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        mainContent.innerHTML = `<div class="card mb-6"><div class="flex items-end gap-4"><div><label for="my-attendance-month" class="block text-sm font-medium">Month</label><input type="month" id="my-attendance-month" class="form-input mt-1" value="${currentMonth}"></div></div></div><div id="my-attendance-sheet-container"></div>`;
+        document.getElementById('my-attendance-month').addEventListener('change', renderMyAttendanceSheet);
+        renderMyAttendanceSheet();
+    }
+    
+    function renderMyAttendanceSheet() {
+        const monthValue = document.getElementById('my-attendance-month')?.value;
+        const container = document.getElementById('my-attendance-sheet-container');
+        if (!monthValue || !container) return;
+
+        const [year, month] = monthValue.split('-').map(Number);
+        const daysInMonth = new Date(year, month, 0).getDate();
+
+        const recordsForMonth = teacherAttendanceRecords.filter(r => r.date && r.date.startsWith(monthValue));
+        const myId = teacher.id;
+
+        let tableRows = '';
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${monthValue}-${String(day).padStart(2, '0')}`;
+            const record = recordsForMonth.find(r => r.date === dateStr);
+            const myAttendance = record?.attendance?.[myId];
+
+            let checkIn = 'N/A';
+            let checkOut = 'N/A';
+            let status = 'Absent';
+            let statusClass = 'bg-red-100 text-red-700';
+
+            if (myAttendance) {
+                checkIn = myAttendance.checkIn || 'N/A';
+                checkOut = myAttendance.checkOut || 'N/A';
+                
+                if (myAttendance.status) { // Status override
+                    status = myAttendance.status;
+                    statusClass = status === 'Leave' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700';
+                } else if (myAttendance.checkIn) {
+                    status = 'Present';
+                    statusClass = 'bg-green-100 text-green-700';
+                }
+            }
+            
+            tableRows += `
+                <tr class="border-b">
+                    <td class="p-4">${dateStr}</td>
+                    <td class="p-4">${checkIn}</td>
+                    <td class="p-4">${checkOut}</td>
+                    <td class="p-4"><span class="px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">${status}</span></td>
+                </tr>
+            `;
+        }
+
+        container.innerHTML = `
+            <div class="card">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead><tr class="border-b"><th class="p-4 text-left">Date</th><th class="p-4 text-left">Check-in</th><th class="p-4 text-left">Check-out</th><th class="p-4 text-left">Status</th></tr></thead>
+                        <tbody>${tableRows}</tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderHomework() {
+        const teacherHomework = homework.filter(h => h.teacherId === teacher.id).sort((a,b) => new Date(b.date) - new Date(a.date));
+        mainContent.innerHTML = `<div class="flex justify-end mb-6"><button id="add-homework-btn" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" /></svg> Add Homework</button></div><div class="space-y-4">${teacherHomework.length > 0 ? teacherHomework.map(h => `<div class="card"><div class="flex justify-between items-start"><div><h4 class="font-bold text-lg">${h.title} <span class="text-sm font-normal text-gray-500">(${h.subject})</span></h4><p class="text-sm text-gray-500">For: Class ${h.className}-${h.section} | Due: ${h.dueDate}</p><p class="mt-2">${h.description}</p></div><button onclick="deleteHomework('${h.id}')" class="text-gray-400 hover:text-red-500 p-1">Delete</button></div></div>`).join('') : '<div class="card text-center text-gray-500 py-8">No homework assigned yet.</div>'}</div>`;
+        document.getElementById('add-homework-btn').addEventListener('click', () => openHomeworkForm());
+    }
+    
+    function renderLiveClass() {
+        const teacherClasses = liveClasses.filter(lc => lc.teacherId === teacher.id).sort((a,b) => new Date(b.date) - new Date(a.date));
+        const today = new Date().toISOString().split('T')[0];
+
+        const getStatusBadge = (status) => {
+            if (status === 'live') return `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Live</span>`;
+            if (status === 'ended') return `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">Ended</span>`;
+            return `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">Scheduled</span>`;
+        };
+
+        mainContent.innerHTML = `<div class="flex justify-end mb-6"><button id="add-liveclass-btn" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" /></svg> Schedule Class</button></div><div class="space-y-4">${teacherClasses.length > 0 ? teacherClasses.map(lc => {
+            const isToday = lc.date === today;
+            const canStart = isToday && lc.status === 'scheduled';
+            return `
+            <div class="card">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h4 class="font-bold text-lg">${lc.topic} <span class="text-base font-medium text-gray-500">(${lc.subject})</span></h4>
+                        <p class="text-sm text-gray-500">For: Class ${lc.className}-${lc.section} | On: ${lc.date} at ${lc.startTime}</p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        ${getStatusBadge(lc.status)}
+                        ${canStart ? `<button onclick="startLiveClass('${lc.id}')" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700">Start Class</button>` : ''}
+                        ${lc.status !== 'live' ? `<button onclick="deleteLiveClass('${lc.id}')" class="text-gray-400 hover:text-red-500 p-2 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 1 0 .53 1.405c.78-.246 1.559-.389 2.335-.463v.113h6v-.113c.776.074 1.555.217 2.335.463a.75.75 0 1 0 .53-1.405c-.785-.248-1.57-.391-2.365-.468v-.443A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V15.25a.75.75 0 0 1-1.5 0V4.075A12.25 12.25 0 0 0 10 4Z M7.5 15.25a.75.75 0 0 1-1.5 0V4.075a12.25 12.25 0 0 0-1 .064V15.25a.75.75 0 0 1-1.5 0V4.14a.75.75 0 1 1 1.03-1.28c.413-.162.836-.31 1.27-.435A4.25 4.25 0 0 1 7.5 3.75v11.5Z" clip-rule="evenodd" /></svg></button>` : ''}
+                    </div>
+                </div>
+            </div>`
+        }).join('') : '<div class="card text-center py-8 text-gray-500">No live classes scheduled.</div>'}</div>`;
+        document.getElementById('add-liveclass-btn').addEventListener('click', () => openLiveClassForm());
+    }
+    
+    function renderAttendance() {
+        mainContent.innerHTML = `<div class="card"><div class="flex items-end gap-4"><div><label class="block text-sm font-medium">Date</label><input type="date" id="attendance-date" class="form-input mt-1" value="${new Date().toISOString().split('T')[0]}"></div><button id="show-attendance-btn" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg">Show Sheet</button><button id="scan-qr-btn" class="bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M1.5 5.5a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Zm.75 9.25a.75.75 0 0 0 0 1.5h2.5a.75.75 0 0 0 0-1.5h-2.5Zm14-1.5a.75.75 0 0 1 .75.75h2.5a.75.75 0 0 1 0-1.5h-2.5a.75.75 0 0 1-.75-.75Zm.75-6.5a.75.75 0 0 0 0-1.5h-2.5a.75.75 0 0 0 0 1.5h2.5ZM2 2a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H2Zm1 15V3h14v14H3Z" clip-rule="evenodd" /></svg>Scan Student QR</button></div></div><div id="attendance-sheet-container" class="mt-6"></div>`;
+        document.getElementById('show-attendance-btn').addEventListener('click', renderStudentAttendanceSheet);
+        document.getElementById('scan-qr-btn').addEventListener('click', startStudentScanner);
+        renderStudentAttendanceSheet(); // Show today by default
+    }
+    
+    function renderStudentAttendanceSheet() {
+        if (studentQrScanner && studentQrScanner.isScanning) {
+            studentQrScanner.stop();
+        }
+        const date = document.getElementById('attendance-date').value;
+        const container = document.getElementById('attendance-sheet-container');
+        if(!date) return;
+        const studentsInClass = students.filter(s => s.className === teacher.assignedClass && s.section === teacher.assignedSection);
+        const record = attendanceRecords.find(r => r.id === `${date}_${teacher.assignedClass}_${teacher.assignedSection}`);
+        const attendanceData = record ? record.attendance : {};
+        
+        const rows = studentsInClass.map(s => `<tr class="border-b" id="attendance-row-${s.id}"><td class="p-4 font-semibold">${s.studentName}</td><td class="p-4"><div class="flex gap-4">
+            <label><input type="radio" name="status_${s.id}" value="Present" ${attendanceData[s.id] === 'Present' || !attendanceData[s.id] ? 'checked' : ''}> Present</label>
+            <label><input type="radio" name="status_${s.id}" value="Absent" ${attendanceData[s.id] === 'Absent' ? 'checked' : ''}> Absent</label>
+            <label><input type="radio" name="status_${s.id}" value="Leave" ${attendanceData[s.id] === 'Leave' ? 'checked' : ''}> Leave</label>
+        </div></td></tr>`).join('');
+            
+        container.innerHTML = `<div class="card">
+            <div id="scanner-view" class="hidden my-4 max-w-sm mx-auto"></div>
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg">Attendance for ${date}</h3>
+                <button id="mark-all-present" class="bg-green-100 text-green-700 font-semibold py-1 px-3 text-sm rounded-lg hover:bg-green-200">Mark All Present</button>
+            </div>
+            <div class="overflow-x-auto"><table class="w-full"><thead><tr class="border-b"><th class="p-4 text-left">Student</th><th class="p-4 text-left">Status</th></tr></thead><tbody>${rows || `<tr><td colspan="2" class="text-center py-8 text-gray-500">No students found for this class.</td></tr>`}</tbody></table></div>
+            <div class="mt-6 flex justify-end"><button id="save-attendance-btn" class="bg-green-600 text-white font-semibold py-2 px-6 rounded-lg">Save Attendance</button></div></div>`;
+
+        document.getElementById('mark-all-present').addEventListener('click', () => {
+            studentsInClass.forEach(s => {
+                const presentRadio = document.querySelector(`input[name="status_${s.id}"][value="Present"]`);
+                if(presentRadio) presentRadio.checked = true;
+            });
+        });
+        document.getElementById('save-attendance-btn').addEventListener('click', saveStudentAttendance);
+    }
+
+    function renderResults() {
+        mainContent.innerHTML = `<div class="card mb-6"><div class="flex items-end gap-4"><div><label class="block text-sm font-medium">Exam Type</label><input type="text" id="exam-type" placeholder="e.g., Mid-Term 1" class="form-input mt-1"></div><button id="show-results-btn" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg">Enter/View Marks</button></div></div><div id="results-sheet-container"></div>`;
+        document.getElementById('show-results-btn').addEventListener('click', renderResultsSheet);
+    }
+    
+    function renderResultsSheet() {
+        const examType = document.getElementById('exam-type').value;
+        if (!examType) { showToast('Please enter an exam type.'); return; }
+        
+        const container = document.getElementById('results-sheet-container');
+        const studentsInClass = students.filter(s => s.className === teacher.assignedClass && s.section === teacher.assignedSection);
+        const record = results.find(r => r.examType === examType && r.className === teacher.assignedClass && r.section === teacher.assignedSection);
+        const resultsData = record ? record.results : {};
+        
+        const teacherClass = teacher.assignedClass;
+        const subjects = (classSubjects[teacherClass] && classSubjects[teacherClass].length > 0)
+            ? classSubjects[teacherClass]
+            : ['English', 'Math', 'Science', 'History', 'Art'];
+        
+        if (!classSubjects[teacherClass] || classSubjects[teacherClass].length === 0) {
+            showToast(`No subjects configured for ${teacherClass}. Using defaults. Please contact admin.`);
+        }
+
+        const rows = studentsInClass.map(s => `
+            <tr class="border-b" id="result-row-${s.id}">
+                <td class="p-2 font-semibold">${s.studentName}</td>
+                ${subjects.map(sub => `<td class="p-1"><input type="number" class="form-input text-center marks-input" data-student-id="${s.id}" data-subject="${sub}" value="${resultsData[s.id]?.[sub] || ''}" min="0" max="100"></td>`).join('')}
+                <td class="p-2 font-bold text-center" id="total-${s.id}">0</td>
+                <td class="p-2 font-bold text-center" id="percent-${s.id}">0%</td>
+            </tr>`).join('');
+
+        container.innerHTML = `
+            <div class="card"><div class="overflow-x-auto"><table class="w-full min-w-[800px]">
+                <thead><tr class="border-b"><th class="p-2 text-left">Student</th>${subjects.map(s => `<th class="p-1 text-center">${s} (100)</th>`).join('')}<th class="p-2 text-center">Total</th><th class="p-2 text-center">%</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table></div><div class="mt-6 flex justify-end"><button id="save-results-btn" class="bg-green-600 text-white font-semibold py-2 px-6 rounded-lg">Save All Results</button></div></div>`;
+        
+        document.querySelectorAll('.marks-input').forEach(input => {
+            input.addEventListener('input', calculateStudentResult);
+        });
+        
+        studentsInClass.forEach(s => calculateStudentResult({ target: document.querySelector(`.marks-input[data-student-id="${s.id}"]`) }));
+        document.getElementById('save-results-btn').addEventListener('click', saveResults);
+    }
+    
+    function renderPayouts() {
+        const myPayouts = salaries.filter(s => s.staffId === teacher.id).sort((a,b) => new Date(b.monthYear) - new Date(a.monthYear));
+        const rows = myPayouts.map(p => `
+            <tr class="border-b">
+                <td class="p-4 font-semibold">${p.monthYear}</td>
+                <td class="p-4">₹${(p.netSalary || 0).toLocaleString('en-IN')}</td>
+                <td class="p-4"><span class="px-2 py-1 text-xs font-semibold rounded-full ${p.status === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">${p.status}</span></td>
+            </tr>
+        `).join('');
+        mainContent.innerHTML = `
+            <div class="card">
+                <h3 class="text-xl font-bold mb-4">My Salary Payouts</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead><tr class="border-b"><th class="p-4 text-left">Month</th><th class="p-4 text-left">Net Salary</th><th class="p-4 text-left">Status</th></tr></thead>
+                        <tbody>${rows || `<tr><td colspan="3" class="text-center py-8 text-gray-500">No payout records found.</td></tr>`}</tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderQRManagement() {
+        const studentsInClass = students.filter(s => s.className === teacher.assignedClass && s.section === teacher.assignedSection);
+        const rows = studentsInClass.map(s => `
+            <tr class="border-b">
+                <td class="p-4 font-semibold">${s.studentName}</td>
+                <td class="p-4">${s.admissionNumber}</td>
+                <td class="p-4"><button onclick="showStudentQR('${s.id}')" class="font-semibold text-indigo-600 hover:text-indigo-800">Show QR</button></td>
+            </tr>
+        `).join('');
+
+        mainContent.innerHTML = `
+            <div class="card">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">Student QR Codes</h3>
+                    <button id="print-all-qrs" class="bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg">Print All</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead><tr class="border-b"><th class="p-4 text-left">Student Name</th><th class="p-4 text-left">Admission No.</th><th class="p-4 text-left">Action</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        document.getElementById('print-all-qrs').addEventListener('click', printAllQRCodes);
+    }
+
+    function renderMyIDCard() {
+        mainContent.innerHTML = `
+            <div class="max-w-md mx-auto card text-center">
+                 <h3 class="text-2xl font-bold">${teacher.staffName}</h3>
+                 <p class="text-gray-600">${teacher.role}</p>
+                 <p class="text-gray-600 mb-6">Staff ID: ${teacher.id}</p>
+                 <div id="qrcode" class="flex justify-center p-4 bg-white border rounded-lg"></div>
+                 <p class="mt-4 text-sm text-gray-500">Show this QR code to the Vice Principal for attendance.</p>
+            </div>
+        `;
+
+        new QRCode(document.getElementById("qrcode"), {
+            text: teacher.id,
+            width: 256,
+            height: 256,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+    }
+    
+    // --- ACTIONS & DATA HANDLING ---
+    async function saveStudentAttendance() {
+        const date = document.getElementById('attendance-date').value;
+        const studentsInClass = students.filter(s => s.className === teacher.assignedClass && s.section === teacher.assignedSection);
+        const newAttendance = {};
+        studentsInClass.forEach(s => { newAttendance[s.id] = document.querySelector(`input[name="status_${s.id}"]:checked`).value; });
+        const recordId = `${date}_${teacher.assignedClass}_${teacher.assignedSection}`;
+        await db.ref(`attendance/${recordId}`).set({ id: recordId, date, className: teacher.assignedClass, section: teacher.assignedSection, attendance: newAttendance, lastUpdated: new Date().toISOString() });
+        showToast('Attendance Saved!');
+    }
+    
+    function calculateStudentResult(event) {
+        if(!event.target) return;
+        const studentId = event.target.dataset.studentId;
+        const row = document.getElementById(`result-row-${studentId}`);
+        if(!row) return;
+
+        const inputs = row.querySelectorAll('.marks-input');
+        let total = 0;
+        let subjectsCount = 0;
+        inputs.forEach(input => {
+            const value = parseInt(input.value);
+            if (!isNaN(value)) total += value;
+            subjectsCount++;
+        });
+
+        const maxMarks = subjectsCount * 100;
+        const percentage = maxMarks > 0 ? ((total / maxMarks) * 100).toFixed(1) : 0;
+        document.getElementById(`total-${studentId}`).textContent = total;
+        document.getElementById(`percent-${studentId}`).textContent = `${percentage}%`;
+    }
+
+    async function saveResults() {
+        const examType = document.getElementById('exam-type').value;
+        if(!examType) { showToast('Exam type is missing.'); return; }
+        const newResultsData = {};
+        document.querySelectorAll('.marks-input').forEach(input => {
+            const studentId = input.dataset.studentId;
+            const subject = input.dataset.subject;
+            if (!newResultsData[studentId]) newResultsData[studentId] = {};
+            newResultsData[studentId][subject] = parseInt(input.value) || 0;
+        });
+        const resultId = `${examType}_${teacher.assignedClass}_${teacher.assignedSection}`.replace(/ /g, '_');
+        await db.ref(`results/${resultId}`).set({ id: resultId, examType, className: teacher.assignedClass, section: teacher.assignedSection, results: newResultsData, lastUpdated: new Date().toISOString() });
+        showToast('Results saved successfully!');
+    }
+
+    function openHomeworkForm() {
+        openFormModal('Add Homework', `<div><label class="block text-sm font-medium">Title</label><input type="text" id="title" class="form-input mt-1" required></div><div><label class="block text-sm font-medium">Subject</label><input type="text" id="subject" class="form-input mt-1" required></div><div><label class="block text-sm font-medium">Due Date</label><input type="date" id="dueDate" class="form-input mt-1" required></div><div><label class="block text-sm font-medium">Description</label><textarea id="description" class="form-textarea mt-1" rows="4"></textarea></div><div class="flex justify-end gap-3 pt-4"><button type="button" class="form-modal-cancel px-4 py-2 bg-gray-200 rounded-lg">Cancel</button><button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg">Add</button></div>`, async (form) => {
+            const newHomework = { id: db.ref().child('homework').push().key, teacherId: teacher.id, className: teacher.assignedClass, section: teacher.assignedSection, title: form.querySelector('#title').value, subject: form.querySelector('#subject').value, dueDate: form.querySelector('#dueDate').value, description: form.querySelector('#description').value, date: new Date().toISOString() };
+            await db.ref('homework/' + newHomework.id).set(newHomework);
+            homework.push(newHomework);
+            renderHomework();
+            return true;
+        });
+    }
+    
+    async function deleteHomework(id) {
+        if(confirm('Delete this homework?')) {
+            await db.ref('homework/' + id).remove();
+            homework = homework.filter(h => h.id !== id);
+            renderHomework();
+            showToast('Homework deleted.');
+        }
+    }
+    
+    function openLiveClassForm() {
+        openFormModal('Schedule New Live Class', `<div><label>Topic</label><input type="text" id="topic" class="form-input mt-1" required></div><div><label>Subject</label><input type="text" id="subject" class="form-input mt-1" required></div><div><label>Date</label><input type="date" id="date" class="form-input mt-1" required value="${new Date().toISOString().split('T')[0]}"></div><div><label>Start Time</label><input type="time" id="startTime" class="form-input mt-1" required></div><div class="flex justify-end gap-3 pt-4"><button type="button" class="form-modal-cancel px-4 py-2 bg-gray-200 rounded-lg">Cancel</button><button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg">Schedule</button></div>`, async (form) => {
+            const newClass = { id: db.ref().child('liveClasses').push().key, teacherId: teacher.id, teacherName: teacher.staffName, className: teacher.assignedClass, section: teacher.assignedSection, topic: form.querySelector('#topic').value, subject: form.querySelector('#subject').value, date: form.querySelector('#date').value, startTime: form.querySelector('#startTime').value, status: 'scheduled' };
+            await db.ref('liveClasses/' + newClass.id).set(newClass);
+            liveClasses.push(newClass);
+            renderLiveClass();
+            showToast('Live class scheduled!');
+            return true;
+        });
+    }
+    async function deleteLiveClass(id) {
+        if(confirm('Are you sure you want to delete this scheduled class?')) {
+            await db.ref('liveClasses/' + id).remove();
+            liveClasses = liveClasses.filter(lc => lc.id !== id);
+            renderLiveClass();
+            showToast('Live class deleted.');
+        }
+    }
+    async function startLiveClass(classId) {
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            await db.ref(`liveClasses/${classId}/status`).set('live');
+            const liveClass = liveClasses.find(lc => lc.id === classId);
+            if(liveClass) liveClass.status = 'live';
+            renderTeacherClassroomView(classId);
+        } catch(err) {
+            console.error("Error starting class:", err);
+            showToast("Could not access camera/microphone. Please check permissions.");
+        }
+    }
+    async function endLiveClass(classId) {
+        if(localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = null;
+        }
+        await db.ref(`liveClasses/${classId}/status`).set('ended');
+        cleanupDBListeners();
+        setActiveTab('liveclass');
+    }
+    function renderTeacherClassroomView(classId) {
+        document.querySelector('nav').classList.add('hidden'); // Hide nav for immersive view
+        document.querySelector('main header').classList.add('hidden'); // Hide header
+        
+        mainContent.innerHTML = `
+            <div class="classroom-container">
+                <div class="main-video-area">
+                    <video id="teacher-video" autoplay playsinline class="transform -scale-x-100"></video>
+                    <div class="video-controls">
+                        <button id="mic-btn" class="control-btn"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M8.25 4.5a3.75 3.75 0 1 1 7.5 0v8.25a3.75 3.75 0 1 1-7.5 0V4.5Z" /><path d="M6 15a.75.75 0 0 1 .75.75v.008c0 3.036 2.464 5.5 5.5 5.5s5.5-2.464 5.5-5.5v-.008a.75.75 0 0 1 1.5 0v.008a7 7 0 0 1-7 7s-7-3.134-7-7v-.008A.75.75 0 0 1 6 15Z" /></svg></button>
+                        <button id="video-btn" class="control-btn"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M4.5 4.5a3 3 0 0 0-3 3v9a3 3 0 0 0 3 3h8.25a3 3 0 0 0 3-3v-2.845l3.52 1.87a.75.75 0 0 0 1.23-.654V8.13a.75.75 0 0 0-1.23-.655L15.75 9.345V7.5a3 3 0 0 0-3-3H4.5Z" /></svg></button>
+                        <button id="end-class-btn" class="control-btn danger"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M10.25 5.25a.75.75 0 0 0-1.5 0v4.32L6.873 7.72a.75.75 0 0 0-1.054 1.07l1.9 1.85-1.9 1.85a.75.75 0 1 0 1.054 1.07L8.75 11.68v4.57a.75.75 0 0 0 1.5 0v-4.57l1.877 1.82a.75.75 0 1 0 1.054-1.07l-1.9-1.85 1.9-1.85a.75.75 0 0 0-1.054-1.07L10.25 9.57V5.25Z" /><path fill-rule="evenodd" d="M3.75 2.25a.75.75 0 0 0-.75.75v18c0 .414.336.75.75.75h16.5a.75.75 0 0 0 .75-.75V3a.75.75 0 0 0-.75-.75H3.75ZM5.25 3.75h13.5v16.5H5.25V3.75Z" clip-rule="evenodd" /></svg></button>
+                    </div>
+                </div>
+                <div class="classroom-sidebar">
+                    <div class="participants-panel"><div class="panel-header">Participants (<span id="participant-count">0</span>)</div><div id="participants-list" class="panel-body"></div></div>
+                    <div class="chat-panel">
+                        <div class="panel-header">Chat</div>
+                        <div id="chat-messages" class="panel-body chat-messages"></div>
+                        <form id="chat-form" class="chat-input"><input type="text" id="chat-input-field" class="form-input" placeholder="Type a message..." required><button type="submit" class="bg-indigo-600 text-white p-2 rounded-lg">Send</button></form>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('teacher-video').srcObject = localStream;
+        document.getElementById('end-class-btn').onclick = () => endLiveClass(classId);
+        
+        // Listeners for participants and chat
+        const participantsRef = db.ref(`liveClasses/${classId}/participants`);
+        addDBListener(participantsRef, 'value', snap => {
+            const participants = snap.val() || {};
+            const participantCount = Object.keys(participants).length;
+            document.getElementById('participant-count').textContent = participantCount;
+            document.getElementById('participants-list').innerHTML = Object.values(participants).map(p => `<p>${p.name}</p>`).join('');
+        });
+
+        const chatRef = db.ref(`liveClasses/${classId}/chat`);
+        addDBListener(chatRef, 'child_added', snap => {
+            const msg = snap.val();
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('chat-message', msg.senderId === teacher.id ? 'self' : 'other');
+            msgDiv.innerHTML = `<div class="font-bold text-sm">${msg.senderName}</div><div>${msg.text}</div>`;
+            const chatBox = document.getElementById('chat-messages');
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+        
+        document.getElementById('chat-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const input = document.getElementById('chat-input-field');
+            const text = input.value.trim();
+            if (text) {
+                db.ref(`liveClasses/${classId}/chat`).push({ senderId: teacher.id, senderName: teacher.staffName, text, timestamp: firebase.database.ServerValue.TIMESTAMP });
+                input.value = '';
+            }
+        });
+
+        // Controls
+        document.getElementById('mic-btn').addEventListener('click', (e) => {
+            localStream.getAudioTracks().forEach(track => track.enabled = !track.enabled);
+            e.currentTarget.style.backgroundColor = localStream.getAudioTracks()[0].enabled ? 'rgba(255,255,255,0.2)' : '#f87171';
+        });
+        document.getElementById('video-btn').addEventListener('click', (e) => {
+            localStream.getVideoTracks().forEach(track => track.enabled = !track.enabled);
+            e.currentTarget.style.backgroundColor = localStream.getVideoTracks()[0].enabled ? 'rgba(255,255,255,0.2)' : '#f87171';
+        });
+    }
+
+    // --- QR CODE Functionality ---
+    function showStudentQR(studentId) {
+        const student = students.find(s => s.id === studentId);
+        if (!student) return;
+
+        const modal = document.getElementById('qr-modal');
+        const content = document.getElementById('qr-modal-content');
+        content.innerHTML = `
+            <h3 class="font-bold text-xl mb-2">${student.studentName}</h3>
+            <p class="text-gray-600 mb-4">Class: ${student.className}-${student.section}</p>
+            <div id="qrcode-container" class="flex justify-center"></div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button id="close-qr-modal" class="px-4 py-2 bg-gray-200 rounded-lg">Close</button>
+                <button id="print-qr-code" class="px-4 py-2 bg-indigo-600 text-white rounded-lg">Print</button>
+            </div>
+        `;
+        modal.classList.add('active');
+
+        const qrcodeContainer = document.getElementById('qrcode-container');
+        new QRCode(qrcodeContainer, {
+            text: student.id,
+            width: 200,
+            height: 200
+        });
+
+        document.getElementById('close-qr-modal').onclick = () => modal.classList.remove('active');
+        document.getElementById('print-qr-code').onclick = () => {
+            const printContent = `<div style="text-align: center;"><h3 style="font-size: 1.25rem; font-weight: bold;">${student.studentName}</h3><p>${student.className}-${student.section}</p>${qrcodeContainer.innerHTML}</div>`;
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(printContent);
+            printWindow.document.close();
+            printWindow.print();
+            printWindow.close();
+        };
+    }
+
+    function printAllQRCodes() {
+        const studentsInClass = students.filter(s => s.className === teacher.assignedClass && s.section === teacher.assignedSection);
+        let printHtml = '<div id="print-area" class="flex flex-wrap">';
+        studentsInClass.forEach(s => {
+            const tempDiv = document.createElement('div');
+            new QRCode(tempDiv, { text: s.id, width: 100, height: 100 });
+            printHtml += `
+                <div class="qr-card">
+                    <p class="font-bold text-center">${s.studentName}</p>
+                    <p class="text-sm text-center mb-2">${s.className} - ${s.section}</p>
+                    <div class="flex justify-center">${tempDiv.innerHTML}</div>
+                </div>
+            `;
+        });
+        printHtml += '</div>';
+
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write('<html><head><title>Print QR Codes</title>');
+        printWindow.document.write('<script src="https://cdn.tailwindcss.com"><\/script>');
+        printWindow.document.write('<style>.qr-card { width: 48%; border: 1px solid black; padding: 10px; margin: 1%; page-break-inside: avoid; text-align: center; float: left; } .font-bold {font-weight: 700;} .text-sm {font-size: 0.875rem;} .mb-2 {margin-bottom: 0.5rem;} .flex {display:flex;} .justify-center {justify-content: center;}<\/style>');
+        printWindow.document.write('</head><body>');
+        printWindow.document.write(printHtml);
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+        setTimeout(() => { // Timeout to ensure content is rendered
+            printWindow.print();
+            printWindow.close();
+        }, 500);
+    }
+    
+    function startStudentScanner() {
+        renderStudentAttendanceSheet(); // Make sure the sheet is visible
+        const scannerView = document.getElementById('scanner-view');
+        scannerView.innerHTML = '<div id="student-qr-reader" class="border-2 rounded-lg"></div>';
+        scannerView.classList.remove('hidden');
+
+        studentQrScanner = new Html5Qrcode("student-qr-reader");
+
+        const onScanSuccess = (decodedText, decodedResult) => {
+            const studentId = decodedText;
+            const student = students.find(s => s.id === studentId);
+            if (student) {
+                const presentRadio = document.querySelector(`#attendance-row-${studentId} input[value="Present"]`);
+                if (presentRadio) {
+                    if (!presentRadio.checked) {
+                        presentRadio.checked = true;
+                        const row = document.getElementById(`attendance-row-${studentId}`);
+                        row.style.backgroundColor = '#dcfce7';
+                        setTimeout(() => { row.style.backgroundColor = ''; }, 2000);
+                        showToast(`${student.studentName} marked present.`);
+                    } else {
+                         showToast(`${student.studentName} is already marked present.`, true);
+                    }
+                }
+            } else {
+                showToast("Invalid QR code.", true);
+            }
+        };
+
+        studentQrScanner.start(
+            { facingMode: "environment" },
+            { fps: 5, qrbox: { width: 250, height: 250 } },
+            onScanSuccess,
+            (error) => {} // onScanFailure
+        ).catch(err => {
+            showToast("Failed to start scanner. Check camera permissions.", true);
+            console.error(err);
+        });
+    }
+
+    // --- APP FLOW & NAVIGATION ---
+    function setActiveTab(tabName) {
+        // Before switching, cleanup classroom view if it exists
+        document.querySelector('nav').classList.remove('hidden');
+        document.querySelector('main header').classList.remove('hidden');
+        if (studentQrScanner && studentQrScanner.isScanning) {
+            studentQrScanner.stop();
+        }
+
+        const pageTitles = { dashboard: 'Dashboard', 'id-card': 'My ID Card', 'my-attendance': 'My Attendance', attendance: 'Student Attendance', 'qr-management': 'QR Management', homework: 'Manage Homework', results: 'Manage Results', liveclass: 'Live Classes', payouts: 'View Payouts' };
+        document.getElementById('page-title').textContent = pageTitles[tabName];
+        document.querySelectorAll('.tab-button').forEach(b => b.classList.toggle('active', b.dataset.tab === tabName));
+        const renderFunction = { dashboard: renderDashboard, 'id-card': renderMyIDCard, 'my-attendance': renderMyAttendance, attendance: renderAttendance, 'qr-management': renderQRManagement, homework: renderHomework, results: renderResults, liveclass: renderLiveClass, payouts: renderPayouts }[tabName];
+        if(renderFunction) renderFunction();
+    }
+    
+    async function runApp(loggedInUser) {
+        // Show app and hide login
+        document.getElementById('login-overlay').classList.add('hidden');
+        document.querySelector('nav').classList.remove('hidden');
+        document.querySelector('main').classList.remove('hidden');
+
+        // Show loading state in main content
+        mainContent.innerHTML = `<div class="text-center p-8"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div><p class="mt-4 text-gray-600">Loading your data...</p></div>`;
+        
+        try {
+            const refs = {
+                staff: db.ref('staff').once('value'),
+                students: db.ref('students').once('value'),
+                homework: db.ref('homework').once('value'),
+                liveClasses: db.ref('liveClasses').once('value'),
+                attendance: db.ref('attendance').once('value'),
+                teacherAttendance: db.ref('teacherAttendance').once('value'),
+                results: db.ref('results').once('value'),
+                salaries: db.ref('salaries').once('value'),
+                subjects: db.ref('subjects').once('value'),
+            };
+
+            const snapshots = await Promise.all(Object.values(refs));
+            const [staffSnap, studentsSnap, homeworkSnap, liveClassesSnap, attendanceSnap, teacherAttendanceSnap, resultsSnap, salariesSnap, subjectsSnap] = snapshots;
+
+            const allStaff = Object.values(staffSnap.val() || {});
+            teacher = allStaff.find(s => s.id === loggedInUser.id);
+
+            if (!teacher) { logout(); throw new Error('Teacher profile not found.'); }
+            
+            students = Object.values(studentsSnap.val() || {});
+            homework = Object.values(homeworkSnap.val() || {});
+            liveClasses = Object.values(liveClassesSnap.val() || {});
+            attendanceRecords = Object.values(attendanceSnap.val() || {});
+            teacherAttendanceRecords = Object.values(teacherAttendanceSnap.val() || {});
+            results = Object.values(resultsSnap.val() || {});
+            salaries = Object.values(salariesSnap.val() || {});
+            classSubjects = subjectsSnap.val() || {};
+
+            // Setup UI
+            document.getElementById('teacher-info').innerHTML = `<p class="font-semibold">${teacher.staffName}</p><p class="text-sm text-gray-500">${teacher.role}</p>`;
+            document.querySelectorAll('.tab-button').forEach(btn => btn.addEventListener('click', () => setActiveTab(btn.dataset.tab)));
+            document.getElementById('logout-btn').addEventListener('click', logout);
+            setActiveTab('dashboard');
+
+        } catch (error) {
+            console.error("Failed to load teacher data:", error);
+            mainContent.innerHTML = `<div class="card text-red-700 bg-red-100"><h3 class="font-bold">Error</h3><p>Could not load your data. Please log out and try again.</p></div>`;
+        }
+    }
+
+    function showLogin() {
+        document.getElementById('login-overlay').classList.remove('hidden');
+    }
+
+    // --- INITIALIZATION ---
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+
+        const form = document.getElementById('teacher-login-form');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const mobile = document.getElementById('teacher-mobile').value;
+            const password = document.getElementById('teacher-password').value;
+            const button = form.querySelector('button[type="submit"]');
+            button.disabled = true;
+            button.textContent = 'Verifying...';
+            
+            try {
+                const staffSnap = await db.ref('staff').once('value');
+                const allStaff = Object.values(staffSnap.val() || {});
+                const foundTeacher = allStaff.find(s => s.mobile === mobile && s.password === password);
+                
+                if (foundTeacher) {
+                    const user = { role: 'teacher', id: foundTeacher.id };
+                    sessionStorage.setItem('loggedInUser', JSON.stringify(user));
+                    runApp(user);
+                } else {
+                    showToast('Invalid Mobile No. or Password.');
+                }
+            } catch (err) {
+                showToast('Login failed. Check connection.');
+                console.error(err);
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Login';
+            }
+        });
+        
+        let loggedInUser = null;
+        try {
+            const userData = sessionStorage.getItem('loggedInUser');
+            if (userData) loggedInUser = JSON.parse(userData);
+        } catch (e) {
+            sessionStorage.removeItem('loggedInUser');
+        }
+        
+        if (loggedInUser && loggedInUser.role === 'teacher') {
+            runApp(loggedInUser);
+        } else {
+            showLogin();
+        }
+    });
+
+</script>
+
+
+<script src="./script.js"></script></body></html>
